@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stone Wool Production Line</title>
+<style>
+:root{--bg:#eef1f6;--panel:#fff;--text:#161b24;--mute:#566071;--line:#d3d9e3;--acc:#d9560f;--chip:#e8ecf3;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#070c14;--panel:#101826;--text:#e9eef6;--mute:#9aa6b8;--line:#223048;--acc:#ff8a3d;--chip:#1a2536}}
+:root[data-theme="dark"]{--bg:#070c14;--panel:#101826;--text:#e9eef6;--mute:#9aa6b8;--line:#223048;--acc:#ff8a3d;--chip:#1a2536}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{height:100%;margin:0;background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+#stage{flex:1;min-height:0;position:relative;background:#070c14}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.lb{position:absolute;transform:translate(-50%,-50%);background:#1b1a14d9;border:1px solid #8a7740;color:#f0c24a;font:700 17px/1 "Arial Narrow",Impact,sans-serif;padding:6px 10px;border-radius:8px;cursor:pointer}
+.lb.on{background:#ff8a3d;color:#14100a;border-color:#fff}
+#info{background:var(--panel);border-top:1px solid var(--line);padding:10px 14px;max-height:34%;overflow-y:auto}
+#info h2{margin:0 0 3px;font-size:17px}
+#info p{margin:0 0 8px;color:var(--mute)}
+#c{display:flex;flex-wrap:wrap;gap:6px}
+#c span{background:var(--chip);border-radius:999px;padding:3px 10px;font-size:12px}
+#tabs{display:flex;gap:6px;overflow-x:auto;padding:8px 10px;background:var(--panel);border-top:1px solid var(--line)}
+#tabs button{flex:0 0 auto;border:1px solid var(--line);background:var(--chip);color:var(--text);border-radius:10px;padding:9px 14px;font:inherit;font-weight:600}
+#tabs button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+</style></head><body>
+<div id="stage"><div id="labels"></div></div>
+<section id="info"><h2 id="h"></h2><p id="d"></p><div id="c"></div></section>
+<nav id="tabs"></nav>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const T=THREE,stage=document.getElementById('stage');
+const R=new T.WebGLRenderer({antialias:true});R.setPixelRatio(Math.min(devicePixelRatio,2));stage.insertBefore(R.domElement,stage.firstChild);
+const sc=new T.Scene();sc.background=new T.Color(0x070c14);sc.fog=new T.Fog(0x070c14,24,52);
+const cam=new T.PerspectiveCamera(45,1,.1,100);
+sc.add(new T.AmbientLight(0x9aa8c8,.75));
+const dl=new T.DirectionalLight(0xffffff,.9);dl.position.set(6,12,9);sc.add(dl);
+const fl=new T.PointLight(0xff6a1a,2,9);fl.position.set(-5,3.5,0);sc.add(fl);
+const sl=new T.PointLight(0xff7a2a,1.3,6);sl.position.set(.6,2.6,1.2);sc.add(sl);
+const mat=(c,o)=>new T.MeshStandardMaterial(Object.assign({color:c,roughness:.55,metalness:.4},o));
+const glow=o=>mat(0xff5a10,Object.assign({emissive:0xff5a10,emissiveIntensity:1.5,roughness:.4},o));
+const mesh=(g,m,x,y,z,p)=>{const o=new T.Mesh(g,m);o.position.set(x,y,z);(p||sc).add(o);return o};
+const grid=new T.GridHelper(36,36,0x2a3a55,0x152033);sc.add(grid);
+const steel=mat(0x4b5668);
+
+/* Furnace (cupola) */
+const F=new T.Group();F.position.set(-5,0,0);sc.add(F);
+[[1,1],[-1,1],[1,-1],[-1,-1]].forEach(([a,b])=>mesh(new T.CylinderGeometry(.1,.1,2.8),steel,a,1.4,b,F));
+mesh(new T.CylinderGeometry(1.7,1.7,.2,32),steel,0,2.9,0,F);
+mesh(new T.CylinderGeometry(1.2,1.4,3.2,32,1,true),mat(0x9fb4c8,{transparent:true,opacity:.22,side:T.DoubleSide,metalness:.1,depthWrite:false}),0,4.6,0,F);
+[3.2,4.6,6.0].forEach(y=>{const t=mesh(new T.TorusGeometry(1.4-(y-3)*.0625,.06,8,40),steel,0,y,0,F);t.rotation.x=Math.PI/2});
+const pool=mesh(new T.CylinderGeometry(1.33,1.38,.9,32),glow(),0,3.5,0,F);
+for(let i=0;i<48;i++){const a=Math.random()*6.28,rr=Math.sqrt(Math.random())*.85,c=Math.random()<.25?0x1b1b1f:[0x5c6068,0x6f6a62,0x474b52][i%3];
+const m=mesh(new T.IcosahedronGeometry(.2+Math.random()*.12,0),mat(c,{roughness:.9,metalness:0}),Math.cos(a)*rr,4.1+Math.random()*1.9,Math.sin(a)*rr,F);m.rotation.set(Math.random()*3,Math.random()*3,0)}
+mesh(new T.ConeGeometry(1.3,.8,32,1,true),mat(0x4b5668,{side:T.DoubleSide}),0,6.6,0,F);
+mesh(new T.CylinderGeometry(.3,.3,1.5),steel,0,7.4,0,F);
+const blast=mesh(new T.TorusGeometry(1.46,.08,8,40),mat(0x4aa3ff,{emissive:0x2a7fd0,emissiveIntensity:.7}),0,3.3,0,F);blast.rotation.x=Math.PI/2;
+mesh(new T.BoxGeometry(.6,.25,.35),steel,1.55,3.3,0,F);
+
+/* Runner and melt stream */
+mesh(new T.BoxGeometry(1.7,.12,.3),steel,-2.45,3.2,0);
+mesh(new T.BoxGeometry(1.7,.03,.12),glow(),-2.45,3.27,0);
+const stream=mesh(new T.CylinderGeometry(.05,.05,.56,10),glow({emissiveIntensity:2}),-1.6,3.0,0);
+
+/* Cascade spinner */
+mesh(new T.BoxGeometry(4.8,2.6,.3),mat(0x2b3442),.1,2.4,-.9);
+mesh(new T.BoxGeometry(1,1.1,.3),mat(0x2b3442),.1,.55,-.9);
+const WH=[[-1.6,2.2,.5,3],[-.5,2.7,.55,-4],[.6,2.2,.6,5],[1.8,2.7,.65,-6]].map(([x,y,r,s])=>{
+const w=mesh(new T.CylinderGeometry(r,r,.8,40).rotateX(Math.PI/2),mat(0xaab3c0,{metalness:.5,roughness:.3}),x,y,0);
+mesh(new T.TorusGeometry(r,.04,8,40),glow({emissiveIntensity:.8}),0,0,.4,w);
+const k=mesh(new T.BoxGeometry(r*1.7,.07,.03),mat(0x1b2230),0,0,.41,w);
+const k2=mesh(new T.BoxGeometry(r*1.7,.07,.03),mat(0x1b2230),0,0,.41,w);k2.rotation.z=1.57;
+return{w,s,x,y,r}});
+mesh(new T.TorusGeometry(.82,.05,8,40),mat(0x4aa3ff,{emissive:0x2a7fd0,emissiveIntensity:.8}),1.8,2.7,.5);
+
+/* Collection chamber */
+const cg=new T.BoxGeometry(8.4,3.8,3.2);
+mesh(cg,mat(0x7aa7d9,{transparent:true,opacity:.07,metalness:0,depthWrite:false}),6.4,2,0);
+const ed=new T.LineSegments(new T.EdgesGeometry(cg),new T.LineBasicMaterial({color:0x7aa7d9}));ed.position.set(6.4,2,0);sc.add(ed);
+const cv=document.createElement('canvas');cv.width=64;cv.height=8;const cx=cv.getContext('2d');cx.fillStyle='#2a303b';cx.fillRect(0,0,64,8);cx.fillStyle='#667284';cx.fillRect(0,0,6,8);
+const bt=new T.CanvasTexture(cv);bt.wrapS=T.RepeatWrapping;bt.repeat.set(24,1);
+mesh(new T.BoxGeometry(8.2,.08,2.6),new T.MeshStandardMaterial({map:bt}),6.4,.75,0);
+mesh(new T.BoxGeometry(8,.55,2.4),mat(0x1e2633),6.4,.42,0);
+const mg=new T.BoxGeometry(7.8,1,2.4,24,1,1).translate(0,.5,0),mp=mg.attributes.position;
+for(let i=0;i<mp.count;i++){mp.setY(i,mp.getY(i)>.5?.05+.45*((mp.getX(i)+3.9)/7.8):0)}mg.computeVertexNormals();
+mesh(mg,mat(0xe0c987,{roughness:1,metalness:0}),6.4,.79,0);
+const cones=[];[4.2,5.4,6.6,7.8,9].forEach(x=>[-.6,.6].forEach(z=>{const c=mesh(new T.ConeGeometry(.16,.5,12),mat(0x4aa3ff,{emissive:0x2a7fd0,emissiveIntensity:.8,transparent:true,opacity:.8}),x,1.7,z);c.rotation.x=Math.PI;cones.push(c)}));
+
+/* Particles: orange droplets cool into cream fibres */
+const N=1000,P=new Float32Array(N*3),C=new Float32Array(N*3),V=new Float32Array(N*3),A=new Float32Array(N),L=new Float32Array(N);
+function spawn(i){const k=Math.random()<.55?3:Math.random()<.6?2:1,w=WH[k],a=-.9+Math.random()*1.8,sp=3.5+Math.random()*3.5;
+P[i*3]=w.x+Math.cos(a)*w.r;P[i*3+1]=w.y+Math.sin(a)*w.r;P[i*3+2]=(Math.random()-.5)*.7;
+V[i*3]=Math.cos(a)*sp;V[i*3+1]=Math.sin(a)*sp*.6;V[i*3+2]=(Math.random()-.5)*.8;A[i]=0;L[i]=1.4+Math.random()*1.2}
+for(let i=0;i<N;i++){spawn(i);A[i]=Math.random()*L[i];P[i*3]+=V[i*3]*A[i]*.3}
+const pg=new T.BufferGeometry();pg.setAttribute('position',new T.BufferAttribute(P,3));pg.setAttribute('color',new T.BufferAttribute(C,3));
+const dc=document.createElement('canvas');dc.width=dc.height=32;const dx=dc.getContext('2d'),gr=dx.createRadialGradient(16,16,0,16,16,16);gr.addColorStop(0,'#fff');gr.addColorStop(1,'rgba(255,255,255,0)');dx.fillStyle=gr;dx.fillRect(0,0,32,32);
+sc.add(new T.Points(pg,new T.PointsMaterial({size:.14,vertexColors:true,map:new T.CanvasTexture(dc),transparent:true,depthWrite:false,blending:T.AdditiveBlending})));
+
+/* Stages */
+const S=[
+{n:'Overview',d:'Rock melts in the furnace, a glowing stream feeds a cascade spinner, and the fibres land as a mat in the collection chamber. Particle colour shows temperature: orange is molten, cream is cooled fibre.',c:['Drag: orbit','Pinch: zoom','Tap a number'],t:[2,2.8,0],r:17,th:.55,ph:1.25},
+{n:'1 Melting',d:'Basalt, dolomite and recycled briquettes are charged from the top with coke. Blast air near the base burns the coke and the rock melts into a glowing pool.',c:['~1,500 °C','Basalt + dolomite','Coke + blast air'],t:[-5,4.5,0],r:8.5,th:.5,ph:1.3},
+{n:'2 Tapping',d:'The melt leaves through the tap hole and runs along a heated trough as a thin, steady stream that drops onto the first spinner wheel.',c:['~1,400 °C','Continuous stream'],t:[-2.6,3.1,0],r:5.5,th:.4,ph:1.3},
+{n:'3 Fiberizing',d:'Counter-rotating wheels fling the melt from wheel to wheel. Centrifugal force draws it into fibres, and an air ring blows them off the last wheel into the chamber. Binder is sprayed on here.',c:['3–4 wheels','Fibres ~3–6 µm','Air ring blow-off'],t:[.6,2.5,0],r:7,th:.45,ph:1.2},
+{n:'4 Collection',d:'Suction pulls the fibres onto a perforated belt, building a thin primary web. The web is then folded into layers and cured in an oven to set the binder.',c:['Suction belt','Primary web','Cure oven ~200 °C+'],t:[6.4,1.6,0],r:12,th:.75,ph:1.15}];
+const LB=[[1,-5,5.2,0],[2,-2.5,3.5,0],[3,.4,3.9,0],[4,6.4,3.9,0]],lbs=[];
+LB.forEach(([i,x,y,z])=>{const e=document.createElement('div');e.className='lb';e.textContent=['','I','II','III','IV'][i];e.onclick=()=>sel(i);document.getElementById('labels').appendChild(e);lbs.push({e,v:new T.Vector3(x,y,z),i})});
+const tabs=document.getElementById('tabs'),tb=S.map((s,i)=>{const b=document.createElement('button');b.textContent=s.n;b.onclick=()=>sel(i);tabs.appendChild(b);return b});
+const goal={t:new T.Vector3(),r:17,th:.55,ph:1.25},cur={t:new T.Vector3(2,2.8,0),r:30,th:.2,ph:1.3};
+function sel(i){const s=S[i];goal.t.set(...s.t);goal.r=s.r;goal.th=s.th;goal.ph=s.ph;
+tb.forEach((b,j)=>b.classList.toggle('on',j==i));lbs.forEach(l=>l.e.classList.toggle('on',l.i==i));
+h.textContent=s.n.replace(/^\d /,'');d.textContent=s.d;c.innerHTML='';s.c.forEach(x=>{const e=document.createElement('span');e.textContent=x;c.appendChild(e)});if(tb[i].scrollIntoView)tb[i].scrollIntoView({inline:'center',block:'nearest'})}
+const h=document.getElementById('h'),d=document.getElementById('d'),c=document.getElementById('c');sel(0);
+
+/* Controls */
+const ptr=new Map();let pd=0;const el=R.domElement;
+el.addEventListener('pointerdown',e=>{el.setPointerCapture(e.pointerId);ptr.set(e.pointerId,[e.clientX,e.clientY]);pd=0});
+el.addEventListener('pointerup',e=>ptr.delete(e.pointerId));el.addEventListener('pointercancel',e=>ptr.delete(e.pointerId));
+el.addEventListener('pointermove',e=>{const p=ptr.get(e.pointerId);if(!p)return;
+if(ptr.size==1){goal.th-=(e.clientX-p[0])*.006;goal.ph=Math.min(1.6,Math.max(.3,goal.ph-(e.clientY-p[1])*.006))}
+else if(ptr.size==2){const o=[...ptr.entries()].find(([k])=>k!=e.pointerId)[1],nd=Math.hypot(e.clientX-o[0],e.clientY-o[1]),od=Math.hypot(p[0]-o[0],p[1]-o[1]);if(od>0)goal.r=Math.min(30,Math.max(4,goal.r*od/nd))}
+ptr.set(e.pointerId,[e.clientX,e.clientY])});
+el.addEventListener('wheel',e=>{e.preventDefault();goal.r=Math.min(30,Math.max(4,goal.r*(1+e.deltaY*.001)))},{passive:false});
+let W=1,H=1;function rs(){W=stage.clientWidth;H=stage.clientHeight;R.setSize(W,H);cam.aspect=W/H;cam.updateProjectionMatrix()}
+new ResizeObserver(rs).observe(stage);rs();
+
+/* Loop */
+const clk=new T.Clock(),org=new T.Color(1,.38,.1),cr=new T.Color(.93,.9,.7),tc=new T.Color();
+function loop(){requestAnimationFrame(loop);const dt=Math.min(clk.getDelta(),.05),t=clk.elapsedTime;
+WH.forEach(w=>w.w.rotation.z+=w.s*dt*2);bt.offset.x-=dt*.35;
+const fk=.85+.15*Math.sin(t*9)+.05*Math.sin(t*23);fl.intensity=2*fk;sl.intensity=1.3*fk;pool.material.emissiveIntensity=1.3+.3*Math.sin(t*3);stream.scale.x=stream.scale.z=.85+.3*Math.sin(t*14);
+cones.forEach((c,i)=>c.position.y=1.7-.12*Math.abs(Math.sin(t*3+i)));
+for(let i=0;i<N;i++){const j=i*3;V[j+1]-=1.6*dt;V[j]*=1-.25*dt;P[j]+=V[j]*dt;P[j+1]+=V[j+1]*dt;P[j+2]+=V[j+2]*dt;A[i]+=dt;
+if(Math.abs(P[j+2])>1.4)V[j+2]*=-1;if(P[j+1]<.9||P[j]>10.4||A[i]>L[i])spawn(i);
+tc.copy(org).lerp(cr,Math.min(A[i]/.6,1));C[j]=tc.r;C[j+1]=tc.g;C[j+2]=tc.b}
+pg.attributes.position.needsUpdate=pg.attributes.color.needsUpdate=true;
+cur.t.lerp(goal.t,.06);cur.r+=(goal.r-cur.r)*.06;cur.th+=(goal.th-cur.th)*.08;cur.ph+=(goal.ph-cur.ph)*.08;
+const k=Math.max(1,Math.pow(1.3/cam.aspect,.8)),rr=cur.r*k;
+cam.position.set(cur.t.x+rr*Math.sin(cur.ph)*Math.sin(cur.th),cur.t.y+rr*Math.cos(cur.ph),cur.t.z+rr*Math.sin(cur.ph)*Math.cos(cur.th));cam.lookAt(cur.t);
+lbs.forEach(l=>{const v=l.v.clone().project(cam);l.e.style.display=v.z<1?'block':'none';l.e.style.left=(v.x*.5+.5)*W+'px';l.e.style.top=(-v.y*.5+.5)*H+'px'});
+R.render(sc,cam)}
+loop();
+</script></body></html>
